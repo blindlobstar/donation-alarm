@@ -4,7 +4,9 @@ import (
 	"donation-alarm/internal/backend/database"
 	"encoding/json"
 	"log"
+	"math/rand"
 	"net/http"
+	"strings"
 
 	"github.com/nicklaw5/helix"
 )
@@ -47,12 +49,13 @@ func (t *Twitch) Authenticate(w http.ResponseWriter, r *http.Request) error {
 	// if user not exists, create one, publish event
 	// and response with internal access and refresh tokens
 	if len(existingStreamers) == 0 {
-		err := t.DB.CreateStreamer(&existingStreamers[0])
+		streamer := database.Streamer{}
+		streamer.SecretCode = generateSecretCode()
+
+		err := t.DB.CreateStreamer(&streamer)
 		if err != nil {
 			return err
 		}
-		// TODO: publish event
-
 	} else if len(existingStreamers) > 1 {
 		log.Printf("there is more than one user with same twitchId: %s \n", vr.Data.UserID)
 		return err
@@ -60,4 +63,14 @@ func (t *Twitch) Authenticate(w http.ResponseWriter, r *http.Request) error {
 
 	w.WriteHeader(http.StatusAccepted)
 	return nil
+}
+
+func generateSecretCode() string {
+	cs := "abcdedfghijklmnopqrstABCDEFGHIJKLMNOP"
+	var rs strings.Builder
+	for i := 0; i < 16; i++ {
+		ri := rand.Intn(len(cs))
+		rs.WriteByte(cs[ri])
+	}
+	return rs.String()
 }
