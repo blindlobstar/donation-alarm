@@ -58,6 +58,6 @@ func (t *Twitch) Authenticate(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusAccepted)
 	return nil
 }
