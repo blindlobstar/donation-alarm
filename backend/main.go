@@ -51,7 +51,7 @@ func main() {
 	}
 
 	r := mux.NewRouter()
-	r.HandleFunc("", errorHandler(tw.Authenticate))
+	r.HandleFunc("/auth/twitch", errorHandler(tw.Authenticate)).Methods("POST")
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
