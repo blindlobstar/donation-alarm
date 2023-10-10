@@ -1,13 +1,13 @@
 package twitch_auth
 
 import (
-	"donation-alarm/internal/backend/database"
 	"encoding/json"
 	"log"
 	"math/rand"
 	"net/http"
 	"strings"
 
+	"github.com/blindlobstar/donation-alarm/backend/internal/database"
 	"github.com/nicklaw5/helix"
 )
 
