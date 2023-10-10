@@ -5,6 +5,7 @@ import (
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -15,7 +16,7 @@ type Repo struct {
 func (r Repo) Migrate() {
 	d, err := postgres.WithInstance(r.DB.DB, &postgres.Config{})
 	if err != nil {
-		log.Fatal("Error migrating database")
+		log.Fatalf("Error migrating database: %v\n", err)
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
@@ -23,11 +24,11 @@ func (r Repo) Migrate() {
 		"postgres",
 		d,
 	)
-	if err != nil {
-		log.Fatal("Error migrating database")
+	if err != nil && err != migrate.ErrNoChange {
+		log.Fatalf("Error migrating database: %v\n", err)
 	}
 
 	if err := m.Up(); err != nil {
-		log.Fatal("Error migrating database")
+		log.Fatalf("Error migrating database: %v\n", err)
 	}
 }
