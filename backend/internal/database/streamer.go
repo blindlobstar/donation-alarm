@@ -7,6 +7,12 @@ type Streamer struct {
 	SecretCode string `db:"secret_code"`
 }
 
+type StreamerRepo interface {
+	CreateStreamer(s *Streamer) error
+	GetStreamers(s Streamer) ([]Streamer, error)
+	GetStreamerById(id int) (*Streamer, error)
+}
+
 func (r Repo) CreateStreamer(s *Streamer) error {
 	_, err := r.DB.Exec("INSERT INTO streamers (twitch_name, secret_code) VALUES ($1, $2)", s.TwitchName, s.SecretCode)
 	return err
