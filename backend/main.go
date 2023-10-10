@@ -46,8 +46,8 @@ func main() {
 	})
 
 	tw := twitch_auth.Twitch{
-		Client: twitchClient,
-		DB:     rep,
+		Client:    twitchClient,
+		Streamers: rep,
 	}
 
 	r := mux.NewRouter()

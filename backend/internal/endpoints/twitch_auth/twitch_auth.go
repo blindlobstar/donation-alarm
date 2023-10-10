@@ -2,6 +2,7 @@ package twitch_auth
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"math/rand"
 	"net/http"
@@ -12,13 +13,13 @@ import (
 )
 
 type Twitch struct {
-	Client *helix.Client
-	DB     database.Repo
+	Client    *helix.Client
+	Streamers database.StreamerRepo
 }
 
 type AuthRequest struct {
-	Code  string
-	State string
+	Code  string `json:"code"`
+	State string `json:"state"`
 }
 
 func (t *Twitch) Authenticate(w http.ResponseWriter, r *http.Request) error {
@@ -41,7 +42,7 @@ func (t *Twitch) Authenticate(w http.ResponseWriter, r *http.Request) error {
 		w.WriteHeader(http.StatusUnauthorized)
 		return nil
 	}
-	existingStreamers, err := t.DB.GetStreamers(database.Streamer{TwitchId: vr.Data.UserID})
+	existingStreamers, err := t.Streamers.GetStreamers(database.Streamer{TwitchId: vr.Data.UserID})
 	if err != nil {
 		return err
 	}
@@ -51,14 +52,16 @@ func (t *Twitch) Authenticate(w http.ResponseWriter, r *http.Request) error {
 	if len(existingStreamers) == 0 {
 		streamer := database.Streamer{}
 		streamer.SecretCode = generateSecretCode()
+		streamer.TwitchId = vr.Data.UserID
+		streamer.TwitchName = vr.Data.Login
 
-		err := t.DB.CreateStreamer(&streamer)
+		err := t.Streamers.CreateStreamer(&streamer)
 		if err != nil {
 			return err
 		}
 	} else if len(existingStreamers) > 1 {
 		log.Printf("there is more than one user with same twitchId: %s \n", vr.Data.UserID)
-		return err
+		return errors.New("there is more than one user with same twitchId")
 	}
 
 	w.WriteHeader(http.StatusAccepted)
