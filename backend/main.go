@@ -1,4 +1,4 @@
-package backend
+package main
 
 import (
 	"context"
@@ -32,7 +32,7 @@ func main() {
 	log.Println("connecting to database...")
 	db, err := sqlx.Connect("postgres", os.Getenv("BACKEND__CONNECTION_STRING"))
 	if err != nil {
-		log.Fatalln("error connecting to database")
+		log.Fatalf("error connecting to database: %v", err)
 	}
 	defer db.Close()
 
