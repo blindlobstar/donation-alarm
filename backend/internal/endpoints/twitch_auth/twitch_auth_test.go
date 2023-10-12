@@ -1,5 +1,5 @@
-//go:build !integration
-// +build !integration
+//go:build unit
+// +build unit
 
 package twitch_auth
 
@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/blindlobstar/donation-alarm/backend/internal/database"
+	"github.com/blindlobstar/donation-alarm/backend/internal/database/streamer"
 	"github.com/nicklaw5/helix"
 )
 
@@ -26,8 +26,8 @@ func (mtc *mockHTTPClient) Do(req *http.Request) (*http.Response, error) {
 }
 
 func TestAuthenticate(t *testing.T) {
-	streamerMock := &database.StreamerMock{
-		Streamers: []database.Streamer{},
+	streamerMock := &streamer.StreamerMock{
+		Streamers: []streamer.Streamer{},
 	}
 	twitchAuth := Twitch{
 		Client:    &helix.Client{},
@@ -154,7 +154,7 @@ func TestAuthenticate(t *testing.T) {
 	}
 
 	// Test case 5: same users in db
-	streamerMock.Streamers = append(streamerMock.Streamers, database.Streamer{TwitchId: "12345"})
+	streamerMock.Streamers = append(streamerMock.Streamers, streamer.Streamer{TwitchId: "12345"})
 	req = httptest.NewRequest("POST", "/auth/twitch", strings.NewReader(`{"code": "valid-code", "state": "state"}`))
 	rr = httptest.NewRecorder()
 	err = twitchAuth.Authenticate(rr, req)

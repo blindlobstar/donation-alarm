@@ -1,6 +1,10 @@
-package database
+package streamer
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/blindlobstar/donation-alarm/backend/internal/database"
+)
 
 type Streamer struct {
 	ID         int
@@ -13,6 +17,10 @@ type StreamerRepo interface {
 	CreateStreamer(s *Streamer) error
 	GetStreamers(s Streamer) ([]Streamer, error)
 	GetStreamerById(id int) (*Streamer, error)
+}
+
+type Repo struct {
+	database.Repo
 }
 
 func (r Repo) CreateStreamer(s *Streamer) error {

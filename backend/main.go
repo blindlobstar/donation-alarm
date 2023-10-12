@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/blindlobstar/donation-alarm/backend/internal/database"
+	"github.com/blindlobstar/donation-alarm/backend/internal/database/streamer"
 	"github.com/blindlobstar/donation-alarm/backend/internal/endpoints/twitch_auth"
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
@@ -47,7 +48,7 @@ func main() {
 
 	tw := twitch_auth.Twitch{
 		Client:    twitchClient,
-		Streamers: rep,
+		Streamers: streamer.Repo{Repo: rep},
 	}
 
 	r := mux.NewRouter()

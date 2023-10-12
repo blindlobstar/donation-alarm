@@ -1,13 +1,14 @@
 //go:build integration
 // +build integration
 
-package database
+package streamer
 
 import (
 	"log"
 	"os"
 	"testing"
 
+	"github.com/blindlobstar/donation-alarm/backend/internal/database"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
@@ -20,7 +21,8 @@ func setupTestDB(t *testing.T) *sqlx.DB {
 		t.Fatalf("Failed to connect to test database: %v", err)
 	}
 	// Create test table
-	Repo{db}.Migrate()
+	db.Exec("DROP DATABASE testdb")
+	database.Repo{DB: db}.Migrate()
 	return db
 }
 
@@ -32,7 +34,7 @@ func TestStreamerRepository(t *testing.T) {
 	db.Exec("DELETE * FROM streamers")
 
 	// Create a Repo with the test database connection
-	repo := Repo{db}
+	repo := Repo{Repo: database.Repo{DB: db}}
 
 	// Create a Streamer
 	streamer := &Streamer{

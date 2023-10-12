@@ -8,13 +8,13 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/blindlobstar/donation-alarm/backend/internal/database"
+	"github.com/blindlobstar/donation-alarm/backend/internal/database/streamer"
 	"github.com/nicklaw5/helix"
 )
 
 type Twitch struct {
 	Client    *helix.Client
-	Streamers database.StreamerRepo
+	Streamers streamer.StreamerRepo
 }
 
 type AuthRequest struct {
@@ -42,7 +42,7 @@ func (t *Twitch) Authenticate(w http.ResponseWriter, r *http.Request) error {
 		w.WriteHeader(http.StatusUnauthorized)
 		return nil
 	}
-	existingStreamers, err := t.Streamers.GetStreamers(database.Streamer{TwitchId: vr.Data.UserID})
+	existingStreamers, err := t.Streamers.GetStreamers(streamer.Streamer{TwitchId: vr.Data.UserID})
 	if err != nil {
 		return err
 	}
@@ -50,7 +50,7 @@ func (t *Twitch) Authenticate(w http.ResponseWriter, r *http.Request) error {
 	// if user not exists, create one, publish event
 	// and response with internal access and refresh tokens
 	if len(existingStreamers) == 0 {
-		streamer := database.Streamer{}
+		streamer := streamer.Streamer{}
 		streamer.SecretCode = generateSecretCode()
 		streamer.TwitchId = vr.Data.UserID
 		streamer.TwitchName = vr.Data.Login

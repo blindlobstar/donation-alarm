@@ -1,6 +1,10 @@
-package database
+package donation
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/blindlobstar/donation-alarm/backend/internal/database"
+)
 
 type Donation struct {
 	ID         int
@@ -24,6 +28,10 @@ type DonationRepo interface {
 	GetDonations(d *Donation) ([]Donation, error)
 	GetDonation(id int) (Donation, error)
 	Update(d Donation) error
+}
+
+type Repo struct {
+	database.Repo
 }
 
 func (r Repo) Create(d *Donation) error {

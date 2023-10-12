@@ -1,7 +1,7 @@
-//go:build !integration
-// +build !integration
+//go:build unit
+// +build unit
 
-package database
+package donation
 
 import (
 	"testing"

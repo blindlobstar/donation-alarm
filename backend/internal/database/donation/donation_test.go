@@ -1,12 +1,14 @@
 //go:build integration
 // +build integration
 
-package database
+package donation
 
 import (
+	"log"
 	"os"
 	"testing"
 
+	"github.com/blindlobstar/donation-alarm/backend/internal/database"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
@@ -19,16 +21,20 @@ func TestDonationRepoIntegration(t *testing.T) {
 		t.Fatalf("Failed to connect to test database: %v", err)
 	}
 	defer db.Close()
-	repo := Repo{DB: db}
-	// Create test table
-	repo.Migrate()
-	db.Exec("DELETE * FROM donations")
-	db.Exec("DELETE * FROM streamers")
+	repo := Repo{Repo: database.Repo{DB: db}}
 
-	db.Exec("INSERT INTO streamers (twitch_id, twitch_name, secret_code) VALUES ($1, $2, $3)", "testTwitchId", "twitchName", "secretCode")
-	db.Exec("INSERT INTO streamers (twitch_id, twitch_name, secret_code) VALUES ($1, $2, $3)", "testTwitchId", "twitchName", "secretCode")
-	db.Exec("INSERT INTO streamers (twitch_id, twitch_name, secret_code) VALUES ($1, $2, $3)", "testTwitchId", "twitchName", "secretCode")
-	db.Exec("INSERT INTO streamers (twitch_id, twitch_name, secret_code) VALUES ($1, $2, $3)", "testTwitchId", "twitchName", "secretCode")
+	db.Exec("DROP DATABASE testdb")
+	repo.Migrate()
+
+	_, err = db.Exec(`
+		INSERT INTO streamers (twitch_id, twitch_name, secret_code) VALUES ('twitch_id_1', 'first_streamer', 'some_secret_code_1');
+		INSERT INTO streamers (twitch_id, twitch_name, secret_code) VALUES ('twitch_id_2', 'second_streamer', 'some_secret_code_2');
+		INSERT INTO streamers (twitch_id, twitch_name, secret_code) VALUES ('twitch_id_3', 'third_streamer', 'some_secret_code_3');
+		INSERT INTO streamers (twitch_id, twitch_name, secret_code) VALUES ('twitch_id_4', 'fourth_streamer', 'some_secret_code_4');
+	`)
+	if err != nil {
+		log.Fatalf("error seeding db: %v", err)
+	}
 
 	// Test create
 	donation := &Donation{

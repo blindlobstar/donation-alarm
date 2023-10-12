@@ -1,4 +1,4 @@
-package database
+package streamer
 
 type StreamerMock struct {
 	Streamers []Streamer

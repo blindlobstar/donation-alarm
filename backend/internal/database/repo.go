@@ -20,7 +20,7 @@ func (r Repo) Migrate() {
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://migrations",
+		"file:///migrations",
 		"postgres",
 		d,
 	)
