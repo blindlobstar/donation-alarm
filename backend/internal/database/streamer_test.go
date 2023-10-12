@@ -28,6 +28,8 @@ func TestStreamerRepository(t *testing.T) {
 	// Set up a test database connection
 	db := setupTestDB(t)
 	defer db.Close()
+	db.Exec("DELETE * FROM donations")
+	db.Exec("DELETE * FROM streamers")
 
 	// Create a Repo with the test database connection
 	repo := Repo{db}

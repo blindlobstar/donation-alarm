@@ -24,11 +24,11 @@ func (r Repo) Migrate() {
 		"postgres",
 		d,
 	)
-	if err != nil && err != migrate.ErrNoChange {
+	if err != nil {
 		log.Fatalf("Error migrating database: %v\n", err)
 	}
 
-	if err := m.Up(); err != nil {
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 		log.Fatalf("Error migrating database: %v\n", err)
 	}
 }
