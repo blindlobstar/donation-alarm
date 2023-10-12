@@ -15,5 +15,6 @@ require (
 	github.com/golang-jwt/jwt v3.2.1+incompatible // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/stripe/stripe-go/v75 v75.10.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 )
