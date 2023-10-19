@@ -8,15 +8,13 @@ services:
       dockerfile: ./Dockerfile.test
     environment:
       BACKEND__CONNECTION_STRING: "postgresql://root:root@db:5432/testdb?sslmode=disable" 
-    ports:
-      - 8888:80
+    volumes:
+      - ./tmp:/go/src/app/cov
     depends_on:
       - db
 
   db:
     image: postgres
-    ports:
-      - 5432:5432
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: root
