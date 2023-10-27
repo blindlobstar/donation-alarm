@@ -21,3 +21,7 @@ services:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: root
       POSTGRES_DB: donationdb
+    volumes:
+      - donationdb:/var/lib/postgresql/data
+volumes:
+  donationdb:

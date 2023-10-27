@@ -16,10 +16,10 @@ type Donation struct {
 }
 
 type CreateRequest struct {
-	StreamerID int    `json:"streamerId"`
-	Amount     int    `json:"amount"`
-	Message    string `json:"message"`
-	Name       string `json:"name"`
+	Streamer string `json:"streamer"`
+	Amount   int    `json:"amount"`
+	Message  string `json:"message"`
+	Name     string `json:"name"`
 }
 
 type CreateResponse struct {
@@ -30,7 +30,7 @@ func (de Donation) Create(w http.ResponseWriter, r *http.Request) error {
 	var request CreateRequest
 	json.NewDecoder(r.Body).Decode(&request)
 
-	if request.StreamerID == 0 {
+	if request.Streamer == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return nil
 	}
@@ -38,12 +38,12 @@ func (de Donation) Create(w http.ResponseWriter, r *http.Request) error {
 		w.WriteHeader(http.StatusBadRequest)
 		return nil
 	}
-	streamer, err := de.SR.GetStreamerById(request.StreamerID)
+	streamers, err := de.SR.GetStreamers(streamer.Streamer{TwitchName: request.Streamer})
 	if err != nil {
 		return err
 	}
 
-	if streamer == nil {
+	if len(streamers) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		return nil
 	}
@@ -51,6 +51,9 @@ func (de Donation) Create(w http.ResponseWriter, r *http.Request) error {
 	paymentParams := &stripe.PaymentIntentParams{
 		Amount:   stripe.Int64(int64(request.Amount)),
 		Currency: stripe.String(string(stripe.CurrencyUSD)),
+		AutomaticPaymentMethods: &stripe.PaymentIntentAutomaticPaymentMethodsParams{
+			Enabled: stripe.Bool(true),
+		},
 	}
 	pi, err := paymentintent.New(paymentParams)
 	if err != nil {
@@ -58,7 +61,7 @@ func (de Donation) Create(w http.ResponseWriter, r *http.Request) error {
 	}
 	donation := &donation.Donation{
 		PaymentID:  pi.ID,
-		StreamerID: request.StreamerID,
+		StreamerID: streamers[0].ID,
 		Amount:     request.Amount,
 		Message:    request.Message,
 		Name:       request.Name,

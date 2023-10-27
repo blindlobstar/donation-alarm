@@ -31,8 +31,8 @@ func (r Repo) CreateStreamer(s *Streamer) error {
 func (r Repo) GetStreamers(s Streamer) ([]Streamer, error) {
 	res := []Streamer{}
 	req := "SELECT * FROM streamers"
-	if s.TwitchId == "" && s.TwitchName == "" {
-		err := r.DB.Select(res, req)
+	if s.TwitchId == "" && s.TwitchName == "" && s.SecretCode == "" {
+		err := r.DB.Select(&res, req)
 		return res, err
 	}
 
@@ -47,6 +47,11 @@ func (r Repo) GetStreamers(s Streamer) ([]Streamer, error) {
 	if s.TwitchName != "" {
 		args = append(args, s.TwitchName)
 		req += fmt.Sprintf(" twitch_name = $%d", len(args))
+	}
+
+	if s.SecretCode != "" {
+		args = append(args, s.SecretCode)
+		req += fmt.Sprintf(" secret_code = $%d", len(args))
 	}
 
 	err := r.DB.Select(&res, req, args...)
