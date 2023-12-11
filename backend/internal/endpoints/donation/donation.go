@@ -17,9 +17,9 @@ type Donation struct {
 
 type CreateRequest struct {
 	Streamer string `json:"streamer"`
-	Amount   int    `json:"amount"`
 	Message  string `json:"message"`
 	Name     string `json:"name"`
+	Amount   int    `json:"amount"`
 }
 
 type CreateResponse struct {
@@ -34,7 +34,7 @@ func (de Donation) Create(w http.ResponseWriter, r *http.Request) error {
 		w.WriteHeader(http.StatusBadRequest)
 		return nil
 	}
-	if request.Amount == 0 {
+	if request.Amount <= 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		return nil
 	}
@@ -48,8 +48,9 @@ func (de Donation) Create(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}
 
+	amount := request.Amount * 100
 	paymentParams := &stripe.PaymentIntentParams{
-		Amount:   stripe.Int64(int64(request.Amount)),
+		Amount:   stripe.Int64(int64(amount)),
 		Currency: stripe.String(string(stripe.CurrencyUSD)),
 		AutomaticPaymentMethods: &stripe.PaymentIntentAutomaticPaymentMethodsParams{
 			Enabled: stripe.Bool(true),
@@ -62,7 +63,7 @@ func (de Donation) Create(w http.ResponseWriter, r *http.Request) error {
 	donation := &donation.Donation{
 		PaymentID:  pi.ID,
 		StreamerID: streamers[0].ID,
-		Amount:     request.Amount,
+		Amount:     amount,
 		Message:    request.Message,
 		Name:       request.Name,
 		Status:     donation.DonationStatusCreated,

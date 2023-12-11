@@ -7,13 +7,13 @@ import (
 )
 
 type Donation struct {
-	ID         int
 	PaymentID  string `db:"payment_id"`
-	StreamerID int    `db:"streamer_id"`
-	Amount     int    `db:"amount"`
 	Message    string `db:"message"`
 	Name       string `db:"name"`
 	Status     string `db:"status"`
+	ID         int
+	StreamerID int `db:"streamer_id"`
+	Amount     int `db:"amount"`
 }
 
 const (

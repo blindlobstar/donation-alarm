@@ -9,14 +9,18 @@ import (
 	"os"
 
 	"github.com/blindlobstar/donation-alarm/backend/internal/database/donation"
-	"github.com/blindlobstar/donation-alarm/backend/internal/sockets"
+	"github.com/blindlobstar/donation-alarm/backend/internal/events"
 	"github.com/stripe/stripe-go"
 	"github.com/stripe/stripe-go/webhook"
 )
 
+type WebhookConfig struct {
+	Secret string
+}
 type WebhookEndpoint struct {
-	WebsocketHub *sockets.Hub
 	DonationRepo donation.DonationRepo
+	EventEmitter events.EventEmitter
+	Config       WebhookConfig
 }
 
 func (we WebhookEndpoint) HandleWebhook(w http.ResponseWriter, req *http.Request) {
@@ -37,15 +41,10 @@ func (we WebhookEndpoint) HandleWebhook(w http.ResponseWriter, req *http.Request
 		return
 	}
 
-	// Replace this endpoint secret with your endpoint's unique secret
-	// If you are testing with the CLI, find the secret by running 'stripe listen'
-	// If you are using an endpoint defined with the API or dashboard, look in your webhook settings
-	// at https://dashboard.stripe.com/webhooks
-	endpointSecret := ""
 	signatureHeader := req.Header.Get("Stripe-Signature")
-	event, err = webhook.ConstructEvent(payload, signatureHeader, endpointSecret)
+	event, err = webhook.ConstructEvent(payload, signatureHeader, we.Config.Secret)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "⚠️  Webhook signature verification failed. %v\n", err)
+		fmt.Fprintf(os.Stderr, "webhook signature verification failed. %v\n", err)
 		w.WriteHeader(http.StatusBadRequest) // Return a 400 error on a bad signature
 		return
 	}
@@ -55,30 +54,50 @@ func (we WebhookEndpoint) HandleWebhook(w http.ResponseWriter, req *http.Request
 		var paymentIntent stripe.PaymentIntent
 		err := json.Unmarshal(event.Data.Raw, &paymentIntent)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error parsing webhook JSON: %v\n", err)
+			fmt.Fprintf(os.Stderr, "error parsing webhook JSON: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		log.Printf("Successful payment for %d.", paymentIntent.Amount)
-		donation, err := we.DonationRepo.GetDonations(&donation.Donation{PaymentID: paymentIntent.ID})
+		log.Printf("successful payment for %d.", paymentIntent.Amount)
+		donations, err := we.DonationRepo.GetDonations(&donation.Donation{PaymentID: paymentIntent.ID})
 		if err != nil {
-			log.Printf("Error getting donation with PaymentID: %s", paymentIntent.ID)
+			log.Printf("error getting donation with PaymentID: %s\n", paymentIntent.ID)
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		if len(donation) < 1 {
-			log.Printf("Donation not found. PaymentID: %s", paymentIntent.ID)
+		if len(donations) < 1 {
+			log.Printf("Donation not found. PaymentID: %s\n", paymentIntent.ID)
 			w.WriteHeader(http.StatusOK)
+			return
+		}
+		if len(donations) > 1 {
+			log.Printf("more than one donation found. PaymentID: %s\n", paymentIntent.ID)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		we.WebsocketHub.Donate(sockets.Donation{
-			Amount:     donation[0].Amount,
-			Text:       donation[0].Message,
-			StreamerID: donation[0].StreamerID,
-		})
-		// Then define and call a func to handle the successful payment intent.
-		// handlePaymentIntentSucceeded(paymentIntent)
+		if paymentIntent.Amount != int64(donations[0].Amount) {
+			log.Printf("wrong amount. expected: %d, got: %d. PaymentID: %s\n", donations[0].Amount, paymentIntent.Amount, paymentIntent.ID)
+		}
+
+		donations[0].Status = donation.DonationStatusPayed
+		if err = we.DonationRepo.Update(donations[0]); err != nil {
+			log.Printf("can't update donation status after payment. DonationID: %d\n", donations[0].ID)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if err = we.EventEmitter.Publish(events.DonationPayed{
+			PaymentID:  donations[0].PaymentID,
+			Message:    donations[0].Message,
+			Name:       donations[0].Name,
+			Status:     donations[0].Status,
+			DonationID: donations[0].ID,
+			StreamerID: donations[0].StreamerID,
+			Amount:     donations[0].Amount,
+		}, "DonationPayed"); err != nil {
+			log.Printf("error publishing error. Err: %v", err)
+		}
+
 	case "payment_method.attached":
 		var paymentMethod stripe.PaymentMethod
 		err := json.Unmarshal(event.Data.Raw, &paymentMethod)

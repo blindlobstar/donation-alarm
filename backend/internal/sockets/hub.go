@@ -1,13 +1,15 @@
 package sockets
 
 import (
+	"log"
+
 	"github.com/gorilla/websocket"
 )
 
 type Hub struct {
 	clients       map[int]*websocket.Conn
 	connClientMap map[*websocket.Conn]int
-	donationsC    chan Donation
+	donationsC    chan DonationEvent
 	registrationC chan RegistrationRequest
 }
 
@@ -16,22 +18,18 @@ type RegistrationRequest struct {
 	StreamerID int
 }
 
-type Donation struct {
-	Amount     int
-	Text       string
-	StreamerID int
-}
-
 type DonationEvent struct {
-	Amount int    `json:"amount"`
-	Text   string `json:"text"`
+	Name       string `json:"name"`
+	Text       string `json:"text"`
+	Amount     int    `json:"amount"`
+	StreamerID int    `json:"-"`
 }
 
 func CreateNew() Hub {
 	return Hub{
 		clients:       map[int]*websocket.Conn{},
 		connClientMap: map[*websocket.Conn]int{},
-		donationsC:    make(chan Donation),
+		donationsC:    make(chan DonationEvent),
 		registrationC: make(chan RegistrationRequest),
 	}
 }
@@ -55,18 +53,19 @@ func (hub *Hub) Run() {
 	}
 }
 
-func (hub *Hub) Donate(donation Donation) {
+func (hub *Hub) Donate(donation DonationEvent) {
 	hub.donationsC <- donation
 }
 
-func (hub *Hub) sendDonation(donation Donation) {
+func (hub *Hub) sendDonation(donation DonationEvent) {
 	conn, ok := hub.clients[donation.StreamerID]
 	if !ok {
 		return
 	}
 
-	err := conn.WriteJSON(DonationEvent{Amount: donation.Amount, Text: donation.Text})
+	err := conn.WriteJSON(donation)
 	if err != nil {
+		log.Printf("can't send message through websocket. StreamerID: %d, Error: %v", donation.StreamerID, err)
 		return
 	}
 }

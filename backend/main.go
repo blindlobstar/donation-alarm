@@ -15,8 +15,12 @@ import (
 	"github.com/blindlobstar/donation-alarm/backend/internal/endpoints/twitch_auth"
 	"github.com/blindlobstar/donation-alarm/backend/internal/endpoints/webhooks"
 	"github.com/blindlobstar/donation-alarm/backend/internal/endpoints/websockets"
+	"github.com/blindlobstar/donation-alarm/backend/internal/events"
+	channelevents "github.com/blindlobstar/donation-alarm/backend/internal/events/cevents"
+	"github.com/blindlobstar/donation-alarm/backend/internal/handlers"
 	"github.com/blindlobstar/donation-alarm/backend/internal/sockets"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 	"github.com/gorilla/websocket"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
@@ -51,15 +55,15 @@ func main() {
 	twitchClient, err := helix.NewClient(&helix.Options{
 		ClientID:     os.Getenv("BACKEND__TWITCH_CLIENT_ID"),
 		ClientSecret: os.Getenv("BACKEND__TWITCH_CLIENT_SECRET"),
-		RedirectURI:  "http://localhost",
+		RedirectURI:  "http://localhost:8888/auth/twitch",
 	})
 
 	tw := twitch_auth.Twitch{
-		Client:    twitchClient,
-		Streamers: streamer.Repo{Repo: rep},
+		Client:      twitchClient,
+		Streamers:   streamer.Repo{Repo: rep},
+		CookieStore: sessions.NewCookieStore([]byte("super secret string that i'm about to change")),
 	}
 
-	log.Println(os.Getenv("STRIPE_API_KEY"))
 	stripe.Key = os.Getenv("STRIPE_API_KEY")
 	de := donationendpoint.Donation{
 		DR: donation.Repo{Repo: rep},
@@ -68,6 +72,10 @@ func main() {
 
 	hub := sockets.CreateNew()
 	go hub.Run()
+
+	eventBus := channelevents.New(make(chan events.Event))
+	eventBus.RegisterHandler(handlers.NewDonationPayedHandler(&hub), "DonationPayed")
+	go eventBus.Run()
 
 	upgrader := websocket.Upgrader{}
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
@@ -78,11 +86,13 @@ func main() {
 	}
 
 	webhook := webhooks.WebhookEndpoint{
-		WebsocketHub: &hub,
 		DonationRepo: donation.Repo{Repo: rep},
+		EventEmitter: &eventBus,
+		Config:       webhooks.WebhookConfig{Secret: os.Getenv("BACKEND__STRIPE_SECRET")},
 	}
 	r := mux.NewRouter()
-	r.HandleFunc("/auth/twitch", errorHandler(tw.Authenticate)).Methods(http.MethodPost)
+	r.HandleFunc("/login/twitch", errorHandler(tw.HandleLogin)).Methods(http.MethodGet)
+	r.HandleFunc("/auth/twitch", errorHandler(tw.HandleOAuth2Callback)).Methods(http.MethodGet)
 	r.HandleFunc("/donation", useCORS(errorHandler(de.Create))).Methods(http.MethodPost, http.MethodOptions)
 	r.HandleFunc("/ws/{secretCode}", errorHandler(ws.Connect))
 	r.HandleFunc("/webhooks", webhook.HandleWebhook).Methods(http.MethodPost)
